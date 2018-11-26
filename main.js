@@ -1,5 +1,7 @@
 const CryptoJS = require('crypto-js')
 
+const difficulty = 4
+
 class Block {
     /** 
      * Block structure
@@ -10,11 +12,12 @@ class Block {
      * - 데이터
      * - 현재 블록의 해쉬 
     */
-    constructor(index, previousHash, timestamp, data, hash) {
+    constructor(index, previousHash, timestamp, data, nonce, hash) {
         this.index = index,
         this.previousHash = previousHash.toString()
         this.timestamp = timestamp
         this.data = data
+        this.nonce = nonce
         this.hash = hash.toString()
     }
 }
@@ -25,6 +28,7 @@ const getGenesisBlock = () => {
         "0",
         1543229546, // new Date().getTime() / 1000
         "my genesis block!!",
+        0,
         "9F16A0EC941107A9F6BCCC21D3B633DED3112E3F6839367AD99A6AC209ED6162" // 001543229546my genesis block!! // https://passwordsgenerator.net/sha256-hash-generator/
     )
 }
@@ -33,8 +37,8 @@ const blockchain = [getGenesisBlock()]
 
 
 
-const calculateHash = (index, previousHash, timestamp, data) => {
-    return CryptoJS.SHA256(index + previousHash + timestamp + data).toString()
+const calculateHash = (index, previousHash, timestamp, data, nonce) => {
+    return CryptoJS.SHA256(index + previousHash + timestamp + data + nonce).toString()
 }
 
 const generateNextBlock = (blockData) => {
@@ -50,17 +54,35 @@ const generateNextBlock = (blockData) => {
     const previousBlock = getLatestBlock() // 제일 마지막 블록을 들고옴.
     const nextIndex = previousBlock.index + 1
     const nextTimestamp = new Date().getTime() / 1000
-    const nextHash = calculateHash(nextIndex, previousBlock.hash, nextTimestamp, blockData)
-    return new Block(nextIndex, previousBlock.hash, nextTimestamp, blockData, nextHash)
+    let nonce = 0
+    let nextHash = calculateHash(nextIndex, previousBlock.hash, nextTimestamp, blockData, nonce)
+    
+    const zeros = '0'.repeat(difficulty)
+    while(!nextHash.startsWith(zeros)) {
+        nonce = nonce + 1
+        // console.log(nonce)
+        nextHash = calculateHash(nextIndex, previousBlock.hash, nextTimestamp, blockData, nonce)
+    }
+
+    return new Block(nextIndex, previousBlock.hash, nextTimestamp, blockData, nonce, nextHash)
 }
 
 const getLatestBlock = () => blockchain[blockchain.length - 1]
 
+// const addBlock = (newBlock) => {
+//     if (isValidNewBlock(newBlock, getLatestBlock())) {
+//         blockchain.push(newBlock)
+//     }
+// }
 
+// const isValidNewBlock = (newBlock, previousBlock) => {
+//     const zeros = '0'.repeat(difficulty)
+//     if (newBlock.hash.startsWith(zeros)) {
+//         return true
+//     }
+//     return false
+// }
 
-blockchain.push(generateNextBlock("abc"))
+console.log("genesis:", blockchain)
 blockchain.push(generateNextBlock("abcd"))
-blockchain.push(generateNextBlock("abce"))
-blockchain.push(generateNextBlock("abcf"))
-
-console.log(blockchain)
+console.log("next:", blockchain)
